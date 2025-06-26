@@ -29,7 +29,7 @@ kubekavach replay pod/frontend-abc123
 
 ## 📚 Documentation
 
-Visit [kubekavach.dev](https://kubekavach.dev) for full documentation.
+Coming Soon !!!!
 
 ## 🏗️ Development
 
