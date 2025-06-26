@@ -1,0 +1,44 @@
+{
+  "name": "kubekavach",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Developer-first Kubernetes security scanner with local pod replay",
+  "keywords": ["kubernetes", "security", "debugging", "replay", "k8s"],
+  "homepage": "https://github.com/kubekavach/kubekavach",
+  "bugs": {
+    "url": "https://github.com/kubekavach/kubekavach/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kubekavach/kubekavach.git"
+  },
+  "license": "Apache-2.0",
+  "author": "KubeKavach Team",
+  "type": "module",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "clean": "turbo clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.2.4",
+    "turbo": "^1.11.3",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.14.1"
+}

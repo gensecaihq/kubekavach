@@ -1,0 +1,34 @@
+# KubeKavach Configuration Example
+kubeconfig: ~/.kube/config
+context: production-cluster
+
+# Compliance Settings (Indian Regulations)
+compliance:
+  certIn:
+    enabled: true
+    autoReport: true
+    organizationId: "ORG-CERT-2024-12345"
+    contactEmail: ciso@yourcompany.com
+    contactPhone: "+91-1234567890"
+  
+  meity:
+    dataLocalization: true
+    region: IN-WEST
+    auditRetentionDays: 180
+    piiRedaction: true
+  
+  audit:
+    enabled: true
+    logPath: /var/log/kubekavach/audit
+    checksumVerification: true
+
+# AI Configuration
+ai:
+  provider: openrouter
+  model: anthropic/claude-3-opus
+
+# Scanning Rules
+rules:
+  privileged-container:
+    enabled: true
+    severity: CRITICAL

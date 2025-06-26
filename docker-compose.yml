@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      target: api
+    container_name: kubekavach-api
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - KUBECONFIG=/root/.kube/config
+      - TZ=Asia/Kolkata
+      - CERT_IN_ORG_ID=${CERT_IN_ORG_ID}
+      - AUDIT_RETENTION_DAYS=180
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${HOME}/.kube/config:/root/.kube/config:ro
+      - /var/log/kubekavach:/var/log/kubekavach
+    networks:
+      - kubekavach-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  ui:
+    build:
+      context: .
+      target: ui
+    container_name: kubekavach-ui
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - PUBLIC_API_URL=http://api:8080
+      - TZ=Asia/Kolkata
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - kubekavach-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: kubekavach-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - kubekavach-net
+    restart: unless-stopped
+
+networks:
+  kubekavach-net:
+    driver: bridge
+
+volumes:
+  redis-data:

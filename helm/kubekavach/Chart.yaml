@@ -1,0 +1,17 @@
+apiVersion: v2
+name: kubekavach
+description: Developer-first Kubernetes security scanner with local pod replay
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - kubernetes
+  - security
+  - scanner
+  - compliance
+home: https://kubekavach.dev
+sources:
+  - https://github.com/kubekavach/kubekavach
+maintainers:
+  - name: KubeKavach Team
+    email: team@kubekavach.dev

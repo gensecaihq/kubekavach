@@ -1,0 +1,89 @@
+{
+  "name": "kubekavach",
+  "version": "0.1.0",
+  "description": "Developer-first Kubernetes security scanner with local pod replay",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "kubekavach": "./bin/run.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "oclif.manifest.json"
+  ],
+  "scripts": {
+    "build": "tsup && oclif manifest",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist .turbo oclif.manifest.json",
+    "typecheck": "tsc --noEmit",
+    "postpack": "rm -f oclif.manifest.json",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "@kubekavach/core": "workspace:*",
+    "@kubekavach/rules": "workspace:*",
+    "@kubekavach/replay": "workspace:*",
+    "@kubekavach/ai": "workspace:*",
+    "@kubernetes/client-node": "^0.20.0",
+    "@oclif/core": "^3.18.1",
+    "@oclif/plugin-help": "^6.0.9",
+    "@oclif/plugin-plugins": "^4.1.12",
+    "chalk": "^5.3.0",
+    "cli-table3": "^0.6.3",
+    "figlet": "^1.7.0",
+    "fs-extra": "^11.2.0",
+    "inquirer": "^9.2.12",
+    "js-yaml": "^4.1.0",
+    "ora": "^8.0.1",
+    "open": "^10.0.3",
+    "terminal-link": "^3.0.0"
+  },
+  "devDependencies": {
+    "@oclif/test": "^3.2.1",
+    "@types/figlet": "^1.5.8",
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^9.0.7",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.0",
+    "oclif": "^4.1.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  },
+  "oclif": {
+    "bin": "kubekavach",
+    "dirname": "kubekavach",
+    "commands": "./dist/commands",
+    "plugins": [
+      "@oclif/plugin-help"
+    ],
+    "topicSeparator": " ",
+    "topics": {
+      "config": {
+        "description": "Manage KubeKavach configuration"
+      },
+      "compliance": {
+        "description": "Indian regulatory compliance features (CERT-IN, MeitY)"
+      }
+    },
+    "hooks": {
+      "init": "./dist/hooks/init"
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "kubernetes",
+    "security",
+    "scanner",
+    "k8s",
+    "debugging",
+    "replay"
+  ],
+  "homepage": "https://github.com/kubekavach/kubekavach",
+  "repository": "kubekavach/kubekavach",
+  "bugs": "https://github.com/kubekavach/kubekavach/issues",
+  "license": "Apache-2.0"
+}

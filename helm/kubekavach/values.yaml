@@ -1,0 +1,23 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/kubekavach/kubekavach
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+
+resources: {}
+
+compliance:
+  certIn:
+    enabled: false
+    organizationId: ""
+  meity:
+    dataLocalization: false
+    region: IN-WEST
