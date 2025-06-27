@@ -1,0 +1,49 @@
+# Multi-stage build for production UI
+FROM node:20-alpine AS base
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm@8
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/core/package.json ./packages/core/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Build stage
+FROM base AS builder
+COPY . .
+RUN pnpm run build:ui
+
+# Production stage with nginx
+FROM nginx:alpine AS production
+
+# Create non-root user
+RUN addgroup -g 1001 -S kubekavach && \
+    adduser -S kubekavach -u 1001
+
+# Copy built UI
+COPY --from=builder /app/packages/ui/build /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+
+# Set up security headers
+RUN echo 'add_header X-Frame-Options "DENY" always;' > /etc/nginx/conf.d/security-headers.conf && \
+    echo 'add_header X-Content-Type-Options "nosniff" always;' >> /etc/nginx/conf.d/security-headers.conf && \
+    echo 'add_header X-XSS-Protection "1; mode=block" always;' >> /etc/nginx/conf.d/security-headers.conf && \
+    echo 'add_header Referrer-Policy "strict-origin-when-cross-origin" always;' >> /etc/nginx/conf.d/security-headers.conf && \
+    echo 'add_header Content-Security-Policy "default-src '\''self'\''; script-src '\''self'\''; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' data:; font-src '\''self'\''; connect-src '\''self'\'' http://localhost:8080; frame-ancestors '\''none'\''; base-uri '\''self'\''; form-action '\''self'\'';" always;' >> /etc/nginx/conf.d/security-headers.conf
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:80/ || exit 1
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

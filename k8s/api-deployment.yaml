@@ -1,0 +1,152 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubekavach-api
+  namespace: kubekavach
+  labels:
+    app: kubekavach-api
+    component: api
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: kubekavach-api
+  template:
+    metadata:
+      labels:
+        app: kubekavach-api
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: kubekavach-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      containers:
+      - name: api
+        image: kubekavach/api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: KUBEKAVACH_CONFIG_PATH
+          value: "/etc/kubekavach/config.yaml"
+        - name: API_KEY_ADMIN
+          valueFrom:
+            secretKeyRef:
+              name: kubekavach-secrets
+              key: api-key-admin
+        - name: API_KEY_SCANNER
+          valueFrom:
+            secretKeyRef:
+              name: kubekavach-secrets
+              key: api-key-scanner
+        - name: API_KEY_VIEWER
+          valueFrom:
+            secretKeyRef:
+              name: kubekavach-secrets
+              key: api-key-viewer
+        volumeMounts:
+        - name: config
+          mountPath: /etc/kubekavach
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1001
+      volumes:
+      - name: config
+        configMap:
+          name: kubekavach-config
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubekavach-api
+  namespace: kubekavach
+  labels:
+    app: kubekavach-api
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubekavach-api
+  labels:
+    app: kubekavach-api
+rules:
+- apiGroups: [""]
+  resources: ["pods", "namespaces", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies", "ingresses"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["policy"]
+  resources: ["podsecuritypolicies"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubekavach-api
+  labels:
+    app: kubekavach-api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubekavach-api
+subjects:
+- kind: ServiceAccount
+  name: kubekavach-api
+  namespace: kubekavach

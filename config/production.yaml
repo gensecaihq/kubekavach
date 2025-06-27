@@ -1,0 +1,153 @@
+# Production configuration for KubeKavach
+api:
+  host: "0.0.0.0"
+  port: 8080
+  corsOrigin: "${CORS_ORIGIN:*}"
+  
+database:
+  enabled: true
+  host: "${DATABASE_HOST:postgresql}"
+  port: ${DATABASE_PORT:5432}
+  database: "${DATABASE_NAME:kubekavach}"
+  username: "${DATABASE_USERNAME:kubekavach}"
+  password: "${DATABASE_PASSWORD}"
+  ssl: ${DATABASE_SSL:true}
+  maxConnections: ${DATABASE_MAX_CONNECTIONS:20}
+  connectionTimeout: ${DATABASE_CONNECTION_TIMEOUT:5000}
+
+logging:
+  level: "${LOG_LEVEL:info}"
+  format: "json"
+  
+metrics:
+  enabled: true
+  port: 9090
+  path: "/metrics"
+  
+security:
+  apiKeyLength: 32
+  saltLength: 16
+  hashIterations: 100000
+  sessionTimeout: ${SESSION_TIMEOUT:86400000}  # 24 hours
+  maxFailedAttempts: ${MAX_FAILED_ATTEMPTS:5}
+  lockoutDuration: ${LOCKOUT_DURATION:900000}  # 15 minutes
+  
+rateLimit:
+  api:
+    windowMs: ${API_RATE_LIMIT_WINDOW:900000}  # 15 minutes
+    maxRequests: ${API_RATE_LIMIT_MAX:100}
+  auth:
+    windowMs: ${AUTH_RATE_LIMIT_WINDOW:900000}  # 15 minutes
+    maxRequests: ${AUTH_RATE_LIMIT_MAX:5}
+  scan:
+    windowMs: ${SCAN_RATE_LIMIT_WINDOW:60000}  # 1 minute
+    maxRequests: ${SCAN_RATE_LIMIT_MAX:10}
+
+# Kubernetes scanning rules
+rules:
+  - id: "privileged-containers"
+    name: "Privileged Containers"
+    description: "Detect containers running in privileged mode"
+    severity: "CRITICAL"
+    enabled: true
+  - id: "root-user"
+    name: "Root User"
+    description: "Detect containers running as root user"
+    severity: "HIGH"
+    enabled: true
+  - id: "no-resource-limits"
+    name: "No Resource Limits"
+    description: "Detect containers without resource limits"
+    severity: "MEDIUM"
+    enabled: true
+  - id: "no-readiness-probe"
+    name: "No Readiness Probe"
+    description: "Detect containers without readiness probes"
+    severity: "LOW"
+    enabled: true
+  - id: "no-liveness-probe"
+    name: "No Liveness Probe"
+    description: "Detect containers without liveness probes"
+    severity: "LOW"
+    enabled: true
+  - id: "insecure-capabilities"
+    name: "Insecure Capabilities"
+    description: "Detect containers with dangerous capabilities"
+    severity: "HIGH"
+    enabled: true
+  - id: "host-network"
+    name: "Host Network"
+    description: "Detect pods using host network"
+    severity: "HIGH"
+    enabled: true
+  - id: "host-pid"
+    name: "Host PID"
+    description: "Detect pods using host PID namespace"
+    severity: "HIGH"
+    enabled: true
+  - id: "host-ipc"
+    name: "Host IPC"
+    description: "Detect pods using host IPC namespace"
+    severity: "HIGH"
+    enabled: true
+
+# User configuration (API keys should be managed via environment variables or secrets)
+users:
+  - username: "admin"
+    apiKey: "${API_KEY_ADMIN}"
+    roles: ["admin", "scanner", "viewer"]
+  - username: "scanner"
+    apiKey: "${API_KEY_SCANNER}"
+    roles: ["scanner", "viewer"]
+  - username: "viewer"
+    apiKey: "${API_KEY_VIEWER}"
+    roles: ["viewer"]
+
+# AI providers configuration (optional)
+ai:
+  providers:
+    openai:
+      enabled: ${OPENAI_ENABLED:false}
+      apiKey: "${OPENAI_API_KEY}"
+      model: "${OPENAI_MODEL:gpt-4}"
+    anthropic:
+      enabled: ${ANTHROPIC_ENABLED:false}
+      apiKey: "${ANTHROPIC_API_KEY}"
+      model: "${ANTHROPIC_MODEL:claude-3-sonnet-20240229}"
+    google:
+      enabled: ${GOOGLE_AI_ENABLED:false}
+      apiKey: "${GOOGLE_AI_API_KEY}"
+      model: "${GOOGLE_AI_MODEL:gemini-pro}"
+    ollama:
+      enabled: ${OLLAMA_ENABLED:false}
+      baseUrl: "${OLLAMA_BASE_URL:http://localhost:11434}"
+      model: "${OLLAMA_MODEL:llama2}"
+
+# Monitoring and observability
+monitoring:
+  healthCheck:
+    enabled: true
+    interval: 30000  # 30 seconds
+  metrics:
+    cleanup:
+      enabled: true
+      interval: 60000  # 1 minute
+      retention: 3600000  # 1 hour
+  
+# Error recovery configuration
+errorRecovery:
+  retry:
+    maxAttempts: ${RETRY_MAX_ATTEMPTS:3}
+    initialDelay: ${RETRY_INITIAL_DELAY:1000}
+    maxDelay: ${RETRY_MAX_DELAY:30000}
+    backoffFactor: ${RETRY_BACKOFF_FACTOR:2}
+    jitter: ${RETRY_JITTER:true}
+  circuitBreaker:
+    failureThreshold: ${CIRCUIT_BREAKER_FAILURE_THRESHOLD:5}
+    recoveryTimeout: ${CIRCUIT_BREAKER_RECOVERY_TIMEOUT:60000}
+    monitoringPeriod: ${CIRCUIT_BREAKER_MONITORING_PERIOD:30000}
+
+# Graceful shutdown configuration
+gracefulShutdown:
+  timeout: ${GRACEFUL_SHUTDOWN_TIMEOUT:30000}  # 30 seconds
+  forceExitTimeout: ${FORCE_EXIT_TIMEOUT:10000}  # 10 seconds

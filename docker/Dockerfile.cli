@@ -1,0 +1,64 @@
+# Multi-stage build for production CLI
+FROM node:20-alpine AS base
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm@8
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/cli/package.json ./packages/cli/
+COPY packages/core/package.json ./packages/core/
+COPY packages/rules/package.json ./packages/rules/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Build stage
+FROM base AS builder
+COPY . .
+RUN pnpm run build
+
+# Production stage
+FROM node:20-alpine AS production
+
+# Install kubectl for Kubernetes interaction
+RUN apk add --no-cache curl && \
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/
+
+# Create non-root user
+RUN addgroup -g 1001 -S kubekavach && \
+    adduser -S kubekavach -u 1001
+
+# Install production dependencies only
+WORKDIR /app
+RUN npm install -g pnpm@8
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/cli/package.json ./packages/cli/
+COPY packages/core/package.json ./packages/core/
+COPY packages/rules/package.json ./packages/rules/
+
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy built application
+COPY --from=builder /app/packages/cli/dist ./packages/cli/dist
+COPY --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --from=builder /app/packages/rules/dist ./packages/rules/dist
+
+# Copy configuration files
+COPY --from=builder /app/config ./config
+
+# Create symlink for global CLI usage
+RUN ln -s /app/packages/cli/dist/index.js /usr/local/bin/kubekavach && \
+    chmod +x /usr/local/bin/kubekavach
+
+# Set up security
+RUN chown -R kubekavach:kubekavach /app
+USER kubekavach
+
+# Set default command
+ENTRYPOINT ["kubekavach"]
+CMD ["--help"]

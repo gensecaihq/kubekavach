@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubekavach-api
+  namespace: kubekavach
+  labels:
+    app: kubekavach-api
+    component: api
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "8080"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: kubekavach-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubekavach-ui
+  namespace: kubekavach
+  labels:
+    app: kubekavach-ui
+    component: ui
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: kubekavach-ui

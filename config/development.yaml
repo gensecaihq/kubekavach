@@ -1,0 +1,145 @@
+# Development configuration for KubeKavach
+api:
+  host: "127.0.0.1"
+  port: 8080
+  corsOrigin: "http://localhost:3000"
+  
+database:
+  enabled: false  # Use in-memory storage for development
+  
+logging:
+  level: "debug"
+  format: "pretty"
+  
+metrics:
+  enabled: true
+  port: 9090
+  path: "/metrics"
+  
+security:
+  apiKeyLength: 16  # Shorter for development
+  saltLength: 8
+  hashIterations: 10000  # Fewer iterations for faster dev
+  sessionTimeout: 86400000  # 24 hours
+  maxFailedAttempts: 10  # More lenient for development
+  lockoutDuration: 300000  # 5 minutes
+  
+rateLimit:
+  api:
+    windowMs: 900000  # 15 minutes
+    maxRequests: 1000  # More generous for development
+  auth:
+    windowMs: 900000  # 15 minutes
+    maxRequests: 50
+  scan:
+    windowMs: 60000  # 1 minute
+    maxRequests: 100
+
+# Kubernetes scanning rules (same as production)
+rules:
+  - id: "privileged-containers"
+    name: "Privileged Containers"
+    description: "Detect containers running in privileged mode"
+    severity: "CRITICAL"
+    enabled: true
+  - id: "root-user"
+    name: "Root User"
+    description: "Detect containers running as root user"
+    severity: "HIGH"
+    enabled: true
+  - id: "no-resource-limits"
+    name: "No Resource Limits"
+    description: "Detect containers without resource limits"
+    severity: "MEDIUM"
+    enabled: true
+  - id: "no-readiness-probe"
+    name: "No Readiness Probe"
+    description: "Detect containers without readiness probes"
+    severity: "LOW"
+    enabled: true
+  - id: "no-liveness-probe"
+    name: "No Liveness Probe"
+    description: "Detect containers without liveness probes"
+    severity: "LOW"
+    enabled: true
+  - id: "insecure-capabilities"
+    name: "Insecure Capabilities"
+    description: "Detect containers with dangerous capabilities"
+    severity: "HIGH"
+    enabled: true
+  - id: "host-network"
+    name: "Host Network"
+    description: "Detect pods using host network"
+    severity: "HIGH"
+    enabled: true
+  - id: "host-pid"
+    name: "Host PID"
+    description: "Detect pods using host PID namespace"
+    severity: "HIGH"
+    enabled: true
+  - id: "host-ipc"
+    name: "Host IPC"
+    description: "Detect pods using host IPC namespace"
+    severity: "HIGH"
+    enabled: true
+
+# Development user configuration with simple API keys
+users:
+  - username: "admin"
+    apiKey: "dev-admin-key-123"
+    roles: ["admin", "scanner", "viewer"]
+  - username: "scanner"
+    apiKey: "dev-scanner-key-456"
+    roles: ["scanner", "viewer"]
+  - username: "viewer"
+    apiKey: "dev-viewer-key-789"
+    roles: ["viewer"]
+
+# AI providers configuration (disabled by default in development)
+ai:
+  providers:
+    openai:
+      enabled: false
+      apiKey: "your-openai-key-here"
+      model: "gpt-4"
+    anthropic:
+      enabled: false
+      apiKey: "your-anthropic-key-here"
+      model: "claude-3-sonnet-20240229"
+    google:
+      enabled: false
+      apiKey: "your-google-ai-key-here"
+      model: "gemini-pro"
+    ollama:
+      enabled: false
+      baseUrl: "http://localhost:11434"
+      model: "llama2"
+
+# Monitoring and observability (more frequent for development)
+monitoring:
+  healthCheck:
+    enabled: true
+    interval: 10000  # 10 seconds
+  metrics:
+    cleanup:
+      enabled: true
+      interval: 30000  # 30 seconds
+      retention: 1800000  # 30 minutes
+  
+# Error recovery configuration (more tolerant for development)
+errorRecovery:
+  retry:
+    maxAttempts: 2
+    initialDelay: 500
+    maxDelay: 5000
+    backoffFactor: 2
+    jitter: true
+  circuitBreaker:
+    failureThreshold: 10  # Higher threshold for development
+    recoveryTimeout: 30000  # 30 seconds
+    monitoringPeriod: 15000  # 15 seconds
+
+# Graceful shutdown configuration (faster for development)
+gracefulShutdown:
+  timeout: 10000  # 10 seconds
+  forceExitTimeout: 5000  # 5 seconds

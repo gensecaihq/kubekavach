@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubekavach
+  labels:
+    name: kubekavach
+    app.kubernetes.io/name: kubekavach
+    app.kubernetes.io/component: security-scanner
