@@ -16,3 +16,10 @@ export const RuleSchema = z.object({
 });
 
 export type Rule = z.infer<typeof RuleSchema>;
+
+export const Severity = {
+  CRITICAL: 'CRITICAL',
+  HIGH: 'HIGH', 
+  MEDIUM: 'MEDIUM',
+  LOW: 'LOW'
+} as const;

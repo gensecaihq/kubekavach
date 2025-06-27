@@ -28,6 +28,7 @@ The `@kubekavach/rules` package is responsible for the security rule engine. It 
 
 *   **Rule Definiton**: While the source code for the rules is not available in the provided directory listing, the `package.json` file indicates that this package depends on `@kubekavach/core` and `@kubernetes/client-node`. This suggests that the rules are implemented as TypeScript functions that interact with the Kubernetes API to fetch resource configurations and then evaluate them against a set of security best practices.
 *   **Extensibility**: The rule engine is designed to be extensible. Users can add their own custom rules by creating new TypeScript files that export a rule definition object. This object would include the rule ID, name, severity, and the logic for the check.
+*   **Testing**: For production-grade quality, comprehensive testing of rules is crucial. This includes unit tests (as demonstrated in `packages/rules/src/test/pod-security.test.ts`) and advanced techniques like fuzzing or property-based testing to ensure rules correctly identify vulnerabilities across a wide range of valid and malformed Kubernetes manifests.
 
 ### 3. Replay Package (`@kubekavach/replay`)
 
@@ -49,6 +50,7 @@ The `@kubekavach/api` package provides a Fastify-based REST API server that powe
 
 *   **Endpoints**: The API server exposes a set of endpoints that allow the web dashboard to fetch scan results, manage security rules, and track the overall security posture of the cluster.
 *   **Dependencies**: This package depends on `@kubekavach/core` and `@kubekavach/rules` to access the core data structures and the rule engine. It also uses `@fastify/cors` for Cross-Origin Resource Sharing, `@fastify/helmet` for security headers, and `@fastify/swagger` for API documentation.
+*   **API Stability and Versioning**: For a project aiming for CNCF attention, maintaining a stable and well-versioned API is crucial. This ensures that integrations built on top of the API do not break with new releases. Future development should consider API versioning strategies (e.g., `/v1/scan`) and clear deprecation policies.
 
 ### 6. UI Package (`@kubekavach/ui`)
 

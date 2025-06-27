@@ -45,6 +45,8 @@ kubekavach scan [flags]
 *   `-n, --namespace`: The Kubernetes namespace to scan. If not specified, all namespaces will be scanned.
 *   `--kubeconfig`: Path to your kubeconfig file. If not specified, the default kubeconfig will be used.
 
+**Security Note:** When configuring Kubernetes access for KubeKavach, adhere to the principle of least privilege. Grant only the necessary permissions for KubeKavach to perform its scanning and replay functions. Avoid using highly privileged credentials (e.g., cluster-admin) unless absolutely required for specific operations.
+
 **Example:**
 
 ```bash

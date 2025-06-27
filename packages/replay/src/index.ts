@@ -1,6 +1,6 @@
 
 import { V1Pod } from '@kubernetes/client-node';
-import { ReplayConfig, loadConfig } from '@kubekavach/core';
+import { loadConfig } from '@kubekavach/core';
 import Dockerode from 'dockerode';
 import inquirer from 'inquirer';
 
@@ -14,7 +14,7 @@ export class ReplayError extends Error {
 
 export class ReplayEngine {
   private readonly docker: Dockerode;
-  private readonly config: ReplayConfig;
+  private readonly config;
 
   constructor() {
     this.config = loadConfig().replay || {};
@@ -35,6 +35,9 @@ export class ReplayEngine {
       if (!containerSpec || !containerSpec.image) {
         throw new ReplayError('Pod specification is missing a container or container image.');
       }
+
+      // Perform image scanning (placeholder)
+      await this.scanImage(containerSpec.image);
 
       console.log(`Pulling image: ${containerSpec.image}...`);
       await this.docker.pull(containerSpec.image);
@@ -100,13 +103,17 @@ export class ReplayEngine {
         return value;
       case 'placeholder':
         return `KUBEKAVACH_PLACEHOLDER_${secretKeyRef.name}_${secretKeyRef.key}`;
-      case 'insecure-mount':
-        // In a real implementation, you would fetch the secret from the cluster.
-        // This is insecure and should be used with caution.
-        console.warn(`Insecurely mounting secret '${secretKeyRef.name}'.`);
-        return 'INSECURE_SECRET_VALUE';
       default:
-        return '';
+        // Should not happen due to Zod validation, but as a fallback
+        console.warn(`Unknown secret handling strategy: ${this.config.secretHandling}. Using placeholder.`);
+        return `KUBEKAVACH_PLACEHOLDER_${secretKeyRef.name}_${secretKeyRef.key}`;
     }
+  }
+
+  private async scanImage(image: string): Promise<void> {
+    console.log(`Scanning image ${image} for vulnerabilities... (placeholder)`);
+    // In a real implementation, this would integrate with a tool like Trivy or Clair.
+    // await runImageScanner(image);
+    console.log(`Image ${image} scan completed.`);
   }
 }

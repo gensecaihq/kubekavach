@@ -4,3 +4,5 @@
  */
 
 export * from './config-loader';
+export * from './kubernetes-validator';
+export * from './observability';
