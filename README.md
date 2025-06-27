@@ -1,6 +1,6 @@
-# KubeKavach
+# KubeKavach --- ****NOT STABLE**** - ** NOT FOR PROD ** WIP ** More Testing needed **
 
-**Production-grade Kubernetes security scanner with local pod replay capabilities**
+**Kubernetes security scanner with local pod replay capabilities**
 
 KubeKavach is a comprehensive security tool designed to identify vulnerabilities and misconfigurations in Kubernetes clusters. It provides real-time security scanning, local pod debugging capabilities, and AI-powered remediation suggestions.
 
@@ -15,7 +15,7 @@ KubeKavach is a comprehensive security tool designed to identify vulnerabilities
 - **Extensible Rule Engine**: Easy to add custom security rules
 - **Production Ready**: Comprehensive error handling and logging
 
-## 📋 Security Rules
+## 📋 Security Rules v1
 
 | Rule ID | Name | Severity | Category |
 |---------|------|----------|----------|
