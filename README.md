@@ -455,7 +455,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 
 ## 🏆 Enterprise Support
 
-For enterprise support, custom rules, and professional services, contact us at [enterprise@kubekavach.io](mailto:enterprise@kubekavach.io).
+For enterprise support, custom rules, and professional services, contact us at [enterprise@kubekavach.gensecai.org](mailto:enterprise@kubekavach.gensecai.org).
 
 ---
 

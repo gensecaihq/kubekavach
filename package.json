@@ -4,13 +4,13 @@
   "private": true,
   "description": "Developer-first Kubernetes security scanner with local pod replay",
   "keywords": ["kubernetes", "security", "debugging", "replay", "k8s"],
-  "homepage": "https://github.com/kubekavach/kubekavach",
+  "homepage": "https://kubekavach.gensecai.org",
   "bugs": {
-    "url": "https://github.com/kubekavach/kubekavach/issues"
+    "url": "https://github.com/gensecaihq/kubekavach/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kubekavach/kubekavach.git"
+    "url": "git+https://github.com/gensecaihq/kubekavach.git"
   },
   "license": "Apache-2.0",
   "author": "KubeKavach Team",

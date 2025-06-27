@@ -101,7 +101,7 @@ data:
     api:
       port: 3000
       host: "0.0.0.0"
-      corsOrigin: "https://kubekavach.example.com"
+      corsOrigin: "https://kubekavach.gensecai.org"
       rateLimit:
         max: 1000
         timeWindow: "1 minute"
@@ -239,10 +239,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - kubekavach.example.com
+    - kubekavach.gensecai.org
     secretName: kubekavach-tls
   rules:
-  - host: kubekavach.example.com
+  - host: kubekavach.gensecai.org
     http:
       paths:
       - path: /
@@ -267,7 +267,7 @@ helm install kubekavach ./helm/kubekavach \
   --set ai.provider="openai" \
   --set ai.apiKey="your-openai-key" \
   --set ingress.enabled=true \
-  --set ingress.host="kubekavach.example.com"
+  --set ingress.host="kubekavach.gensecai.org"
 ```
 
 ## 🔐 Security Hardening
@@ -326,4 +326,4 @@ spec:
 
 ---
 
-For additional support, contact [support@kubekavach.io](mailto:support@kubekavach.io).
+For additional support, contact [support@kubekavach.gensecai.org](mailto:support@kubekavach.gensecai.org).

@@ -9,7 +9,7 @@ To install the KubeKavach CLI, you will need Node.js (v18 or later) and pnpm (v8
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/kubekavach/kubekavach.git
+    git clone https://github.com/gensecaihq/kubekavach.git
     cd kubekavach
     ```
 

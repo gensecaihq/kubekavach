@@ -9,9 +9,9 @@ keywords:
   - security
   - scanner
   - compliance
-home: https://kubekavach.dev
+home: https://kubekavach.gensecai.org
 sources:
-  - https://github.com/kubekavach/kubekavach
+  - https://github.com/gensecaihq/kubekavach
 maintainers:
   - name: KubeKavach Team
-    email: team@kubekavach.dev
+    email: team@kubekavach.gensecai.org

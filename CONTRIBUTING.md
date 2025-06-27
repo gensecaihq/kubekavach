@@ -16,7 +16,7 @@ Thank you for your interest in contributing to KubeKavach! This document provide
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/your-username/kubekavach.git
+   git clone https://github.com/gensecaihq/kubekavach.git
    cd kubekavach
    ```
 
@@ -250,7 +250,7 @@ Include:
 
 - **Issues**: Create a GitHub issue for bugs or features
 - **Discussions**: Use GitHub Discussions for questions
-- **Security**: Email security@kubekavach.io for security issues
+- **Security**: Email security@kubekavach.gensecai.org for security issues
 
 ## 🏆 Recognition
 

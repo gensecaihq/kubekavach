@@ -83,8 +83,8 @@
     "debugging",
     "replay"
   ],
-  "homepage": "https://github.com/kubekavach/kubekavach",
-  "repository": "kubekavach/kubekavach",
-  "bugs": "https://github.com/kubekavach/kubekavach/issues",
+  "homepage": "https://kubekavach.gensecai.org",
+  "repository": "gensecaihq/kubekavach",
+  "bugs": "https://github.com/gensecaihq/kubekavach/issues",
   "license": "Apache-2.0"
 }
