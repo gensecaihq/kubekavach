@@ -37,6 +37,6 @@
     "@kubekavach/core": "workspace:*",
     "chart.js": "^4.4.1",
     "date-fns": "^3.2.0",
-    "lucide-svelte": "^0.303.0"
+    "lucide-svelte": "^0.522.0"
   }
 }
