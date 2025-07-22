@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@kubekavach/core": "workspace:*",
-    "@kubernetes/client-node": "^0.20.0"
+    "@kubernetes/client-node": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
