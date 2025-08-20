@@ -3,6 +3,8 @@ import { V1Pod } from '@kubernetes/client-node';
 import { loadConfig } from '@kubekavach/core';
 import Dockerode from 'dockerode';
 import inquirer from 'inquirer';
+import { ImageScanner } from './image-scanner';
+import { ContainerIsolation } from './container-isolation';
 
 // Custom error for replay-specific failures
 export class ReplayError extends Error {
@@ -15,11 +17,15 @@ export class ReplayError extends Error {
 export class ReplayEngine {
   private readonly docker: Dockerode;
   private readonly config;
+  private readonly scanner: ImageScanner;
+  private readonly isolation: ContainerIsolation;
 
   constructor() {
     this.config = loadConfig().replay || {};
+    this.scanner = new ImageScanner();
     try {
       this.docker = new Dockerode(); // Assumes Docker is available
+      this.isolation = new ContainerIsolation(this.docker);
     } catch (error: any) {
       throw new ReplayError('Failed to connect to Docker daemon. Is it running?', error);
     }
@@ -36,23 +42,69 @@ export class ReplayEngine {
         throw new ReplayError('Pod specification is missing a container or container image.');
       }
 
-      // Perform image scanning (placeholder)
-      await this.scanImage(containerSpec.image);
+      // Perform real image security scanning
+      console.log(`Scanning image ${containerSpec.image} for vulnerabilities...`);
+      const scanResult = await this.scanner.scanImage(containerSpec.image, false);
+      const securityReport = await this.scanner.generateSecurityReport(scanResult);
+      console.log('\n' + securityReport + '\n');
+
+      // Check if image is safe to run
+      if (scanResult.vulnerabilities.critical > 0 && !this.config.allowCriticalVulnerabilities) {
+        const { proceed } = await inquirer.prompt([{
+          type: 'confirm',
+          name: 'proceed',
+          message: `Image contains ${scanResult.vulnerabilities.critical} CRITICAL vulnerabilities. Proceed anyway?`,
+          default: false
+        }]);
+        
+        if (!proceed) {
+          throw new ReplayError('Replay aborted due to critical vulnerabilities in image');
+        }
+      }
 
       console.log(`Pulling image: ${containerSpec.image}...`);
       await this.docker.pull(containerSpec.image);
 
-      console.log('Creating container...');
-      const container = await this.docker.createContainer({
+      // Check isolation support
+      const isolationCheck = this.isolation.validateIsolationSupport();
+      if (!isolationCheck.supported) {
+        console.warn('Full isolation not supported on this platform');
+      }
+      isolationCheck.warnings.forEach(w => console.warn(`Warning: ${w}`));
+
+      // Create isolated network if enabled
+      let network;
+      if (this.config.enableNetworkIsolation !== false) {
+        console.log('Creating isolated network...');
+        network = await this.isolation.createIsolatedNetwork(podName || 'unknown');
+      }
+
+      console.log('Creating isolated container...');
+      const baseConfig: Dockerode.ContainerCreateOptions = {
         Image: containerSpec.image,
         name: `kubekavach-replay-${podName}`,
         Cmd: containerSpec.command,
         Env: containerSpec.env?.map(e => `${e.name}=${e.value}`),
-        HostConfig: {
-          CpuShares: 512,
-          Memory: 512 * 1024 * 1024,
-        },
+        Labels: {
+          'kubekavach.pod': podName || 'unknown',
+          'kubekavach.replay': 'true'
+        }
+      };
+
+      // Apply security isolation
+      const secureConfig = this.isolation.getSecureContainerConfig(baseConfig, {
+        enableNetworkIsolation: this.config.enableNetworkIsolation !== false,
+        cpuLimit: this.config.cpuLimit || 0.5,
+        memoryLimit: this.config.memoryLimit || '512m',
+        readOnlyRootFilesystem: this.config.readOnlyRootFilesystem || false
       });
+
+      const container = await this.docker.createContainer(secureConfig);
+
+      // Connect to isolated network if created
+      if (network) {
+        await network.connect({ Container: container.id });
+      }
 
       await container.start();
 
@@ -110,10 +162,4 @@ export class ReplayEngine {
     }
   }
 
-  private async scanImage(image: string): Promise<void> {
-    console.log(`Scanning image ${image} for vulnerabilities... (placeholder)`);
-    // In a real implementation, this would integrate with a tool like Trivy or Clair.
-    // await runImageScanner(image);
-    console.log(`Image ${image} scan completed.`);
-  }
 }

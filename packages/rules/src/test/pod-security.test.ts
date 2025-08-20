@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { privilegedContainerRule, missingResourceLimitsRule, allowPrivilegeEscalationRule } from '../rules/pod-security';
-import { hostNetworkRule, readOnlyRootFilesystemRule } from '../rules/network-security';
-import { runAsNonRootRule, capabilitiesRule } from '../rules/rbac-security';
+import { hostNetworkRule, hostPortRule, readOnlyRootFilesystemRule } from '../rules/network-security';
+import { serviceAccountTokenRule, runAsNonRootRule, capabilitiesRule } from '../rules/rbac-security';
 
 describe('Pod Security Rules', () => {
   describe('privilegedContainerRule', () => {
@@ -209,6 +209,42 @@ describe('Pod Security Rules', () => {
     });
   });
 
+  describe('hostPortRule', () => {
+    it('should pass when no host ports are used', () => {
+      const pod = {
+        kind: 'Pod',
+        apiVersion: 'v1',
+        metadata: { name: 'test-pod', namespace: 'default' },
+        spec: {
+          containers: [{
+            name: 'app',
+            image: 'nginx:latest',
+            ports: [{ containerPort: 8080 }]
+          }]
+        }
+      };
+
+      expect(hostPortRule.validate(pod)).toBe(true);
+    });
+
+    it('should fail when host ports are used', () => {
+      const pod = {
+        kind: 'Pod',
+        apiVersion: 'v1',
+        metadata: { name: 'test-pod', namespace: 'default' },
+        spec: {
+          containers: [{
+            name: 'app',
+            image: 'nginx:latest',
+            ports: [{ containerPort: 8080, hostPort: 8080 }]
+          }]
+        }
+      };
+
+      expect(hostPortRule.validate(pod)).toBe(false);
+    });
+  });
+
   describe('readOnlyRootFilesystemRule', () => {
     it('should pass when root filesystem is read-only', () => {
       const pod = {
@@ -242,6 +278,58 @@ describe('Pod Security Rules', () => {
       };
 
       expect(readOnlyRootFilesystemRule.validate(pod)).toBe(false);
+    });
+  });
+
+  describe('serviceAccountTokenRule', () => {
+    it('should pass when automountServiceAccountToken is false', () => {
+      const pod = {
+        kind: 'Pod',
+        apiVersion: 'v1',
+        metadata: { name: 'test-pod', namespace: 'default' },
+        spec: {
+          automountServiceAccountToken: false,
+          containers: [{
+            name: 'app',
+            image: 'nginx:latest'
+          }]
+        }
+      };
+
+      expect(serviceAccountTokenRule.validate(pod)).toBe(true);
+    });
+
+    it('should fail when automountServiceAccountToken is true', () => {
+      const pod = {
+        kind: 'Pod',
+        apiVersion: 'v1',
+        metadata: { name: 'test-pod', namespace: 'default' },
+        spec: {
+          automountServiceAccountToken: true,
+          containers: [{
+            name: 'app',
+            image: 'nginx:latest'
+          }]
+        }
+      };
+
+      expect(serviceAccountTokenRule.validate(pod)).toBe(false);
+    });
+
+    it('should fail when automountServiceAccountToken is not set (defaults to true)', () => {
+      const pod = {
+        kind: 'Pod',
+        apiVersion: 'v1',
+        metadata: { name: 'test-pod', namespace: 'default' },
+        spec: {
+          containers: [{
+            name: 'app',
+            image: 'nginx:latest'
+          }]
+        }
+      };
+
+      expect(serviceAccountTokenRule.validate(pod)).toBe(false);
     });
   });
 
@@ -359,7 +447,9 @@ describe('Pod Security Rules', () => {
       expect(missingResourceLimitsRule.validate(service)).toBe(true);
       expect(allowPrivilegeEscalationRule.validate(service)).toBe(true);
       expect(hostNetworkRule.validate(service)).toBe(true);
+      expect(hostPortRule.validate(service)).toBe(true);
       expect(readOnlyRootFilesystemRule.validate(service)).toBe(true);
+      expect(serviceAccountTokenRule.validate(service)).toBe(true);
       expect(runAsNonRootRule.validate(service)).toBe(true);
       expect(capabilitiesRule.validate(service)).toBe(true);
     });

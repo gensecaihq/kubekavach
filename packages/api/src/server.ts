@@ -7,12 +7,20 @@ import { metrics, KubeKavachMetrics } from '@kubekavach/core/utils/metrics';
 import { healthManager } from '@kubekavach/core/utils/health';
 import { gracefulShutdown, createShutdownMiddleware } from '@kubekavach/core/utils/graceful-shutdown';
 import { withRetryAndCircuitBreaker } from '@kubekavach/core/utils/error-recovery';
+import { database } from '@kubekavach/core/utils/database';
 import fastifyRateLimit from '@fastify/rate-limit';
+import { allRules } from '@kubekavach/rules';
 import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { randomUUID } from 'crypto';
+
+// Request/response schemas
+const ScanRequestSchema = z.object({
+  namespace: z.string().optional(),
+  ruleIds: z.array(z.string()).optional()
+});
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -30,6 +38,16 @@ const config = loadConfig();
 
 // Initialize observability tools
 initializeObservability(fastify);
+
+// Initialize database if configured
+if (config.database) {
+  database.initialize(config.database).then(() => {
+    logger.info('Database initialized successfully');
+  }).catch((error) => {
+    logger.error('Database initialization failed', error);
+    // Continue without database - will fall back to in-memory storage
+  });
+}
 
 // Register CORS
 fastify.register(fastifyCors, {
@@ -83,8 +101,8 @@ fastify.register(fastifySwaggerUi, {
   transformStaticCSP: (header) => header,
 });
 
-// In-memory store for scan jobs
-const scanJobs = new Map<string, { status: string; result: any }>();
+// Job status tracking (lightweight in-memory for running jobs)
+const jobStatus = new Map<string, { status: 'running' | 'queued' | 'failed'; startedAt: Date; error?: string }>();
 
 // Initialize rate limiters
 const apiLimiter = rateLimiter.createLimiter('api', RateLimitConfigs.api);
@@ -183,6 +201,31 @@ fastify.addHook('preHandler', async (request, reply) => {
   KubeKavachMetrics.apiRequest(request.method, request.url, 200, duration);
 });
 
+// Authentication middleware
+fastify.addHook('onRequest', async (request, reply) => {
+  // Skip auth for health and documentation endpoints
+  if (['/health', '/documentation', '/metrics'].some(path => request.url.startsWith(path))) {
+    return;
+  }
+
+  const apiKey = request.headers['x-api-key'] as string;
+  
+  if (!apiKey) {
+    reply.code(401).send({ error: 'Unauthorized', message: 'API key required' });
+    return;
+  }
+
+  // Find user by API key
+  const user = config.users?.find((u: User) => u.apiKey === apiKey);
+  
+  if (!user) {
+    reply.code(401).send({ error: 'Unauthorized', message: 'Invalid API key' });
+    return;
+  }
+
+  request.user = user;
+});
+
 // Authorization helper
 const authorize = (roles: string[]) => (request: FastifyRequest, reply: any, done: () => void) => {
   if (!request.user) {
@@ -198,6 +241,27 @@ const authorize = (roles: string[]) => (request: FastifyRequest, reply: any, don
   }
   done();
 };
+
+// Rules endpoint
+fastify.get('/rules', {
+  schema: {
+    response: {
+      200: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        description: z.string(),
+        severity: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
+        category: z.string()
+      }))
+    }
+  },
+  tags: ['rules'],
+  summary: 'Get security rules',
+  description: 'Returns all available security rules',
+  preHandler: [authorize(['viewer', 'scanner', 'admin'])]
+}, async (request, reply) => {
+  reply.send(allRules);
+});
 
 // API Key authentication hook with security hardening
 fastify.addHook('preHandler', async (request, reply) => {
@@ -339,11 +403,13 @@ fastify.post('/scan', {
   logger.info('Scan job initiated', { jobId, namespace, ruleIds, user: request.user?.username });
   KubeKavachMetrics.scanStarted(namespace);
 
+  // Track job status in memory
+  jobStatus.set(jobId, { status: 'running', startedAt: new Date() });
+  
   // Start the scan in the background
-  scanJobs.set(jobId, { status: 'running', result: null });
   runScan(jobId, namespace, ruleIds);
 
-  reply.code(202).send({ jobId });
+  reply.code(200).send({ jobId, status: 'running' });
 });
 
 // Endpoint to get scan results
@@ -359,16 +425,134 @@ fastify.get('/scan/results/:jobId', {
   preHandler: [authorize(['viewer', 'scanner'])],
 }, async (request, reply) => {
   const { jobId } = request.params as { jobId: string };
-  const job = scanJobs.get(jobId);
+  
+  try {
+    // Check if job is still running
+    const runningJob = jobStatus.get(jobId);
+    if (runningJob && runningJob.status === 'running') {
+      reply.send({ 
+        status: 'running',
+        startedAt: runningJob.startedAt.toISOString()
+      });
+      return;
+    }
+    
+    if (runningJob && runningJob.status === 'failed') {
+      reply.send({ 
+        status: 'failed',
+        error: runningJob.error || 'Unknown error',
+        startedAt: runningJob.startedAt.toISOString()
+      });
+      return;
+    }
 
-  if (!job) {
-    logger.warn('Scan job not found', { jobId });
-    reply.code(404).send({ error: 'Not Found', message: 'Scan job not found' });
-    return;
+    // Try to get completed result from database
+    const scanResult = await database.getScanResult(jobId);
+    
+    if (scanResult) {
+      // Remove from job tracking since it's completed
+      jobStatus.delete(jobId);
+      
+      reply.send({
+        status: 'completed',
+        result: scanResult
+      });
+      return;
+    }
+
+    // Job not found anywhere
+    reply.code(404).send({ 
+      error: 'Not Found', 
+      message: 'Scan job not found' 
+    });
+    
+  } catch (error: any) {
+    logger.error('Failed to retrieve scan results', error, { jobId });
+    reply.code(500).send({ 
+      error: 'Internal Server Error', 
+      message: 'Failed to retrieve scan results' 
+    });
   }
+});
 
-  logger.info('Scan job status requested', { jobId, status: job.status, user: request.user?.username });
-  reply.send(job);
+// Scan history endpoint
+fastify.get('/scan/history', {
+  schema: {
+    querystring: z.object({
+      cluster: z.string().optional(),
+      namespace: z.string().optional(),
+      limit: z.coerce.number().min(1).max(100).default(20),
+      offset: z.coerce.number().min(0).default(0),
+      startDate: z.string().datetime().optional(),
+      endDate: z.string().datetime().optional()
+    }),
+    response: {
+      200: z.array(ScanResultSchema)
+    }
+  },
+  tags: ['scan'],
+  summary: 'Get scan history',
+  description: 'Retrieves historical scan results with filtering options',
+  preHandler: [authorize(['viewer', 'scanner', 'admin'])]
+}, async (request, reply) => {
+  try {
+    const { cluster, namespace, limit, offset, startDate, endDate } = request.query as any;
+    
+    const options = {
+      cluster,
+      namespace,
+      limit,
+      offset,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined
+    };
+    
+    const scanHistory = await database.getScanHistory(options);
+    reply.send(scanHistory);
+    
+  } catch (error: any) {
+    logger.error('Failed to retrieve scan history', error);
+    reply.code(500).send({ 
+      error: 'Internal Server Error', 
+      message: 'Failed to retrieve scan history' 
+    });
+  }
+});
+
+// Security trends endpoint
+fastify.get('/scan/trends', {
+  schema: {
+    querystring: z.object({
+      days: z.coerce.number().min(1).max(365).default(30)
+    }),
+    response: {
+      200: z.array(z.object({
+        date: z.string(),
+        total: z.number(),
+        critical: z.number(),
+        high: z.number(),
+        medium: z.number(),
+        low: z.number()
+      }))
+    }
+  },
+  tags: ['analytics'],
+  summary: 'Get security trends',
+  description: 'Retrieves security trends over specified time period',
+  preHandler: [authorize(['viewer', 'scanner', 'admin'])]
+}, async (request, reply) => {
+  try {
+    const { days } = request.query as any;
+    const trends = await database.getSecurityTrends(days);
+    reply.send(trends);
+    
+  } catch (error: any) {
+    logger.error('Failed to retrieve security trends', error);
+    reply.code(500).send({ 
+      error: 'Internal Server Error', 
+      message: 'Failed to retrieve security trends' 
+    });
+  }
 });
 
 async function runScan(jobId: string, namespace?: string, ruleIds?: string[]) {
@@ -531,7 +715,22 @@ async function runScan(jobId: string, namespace?: string, ruleIds?: string[]) {
       }
     };
 
-    scanJobs.set(jobId, { status: 'completed', result });
+    // Save to database if available, otherwise keep in memory
+    try {
+      await database.saveScanResult(result);
+      logger.info('Scan result saved to database', { jobId });
+    } catch (error) {
+      logger.warn('Failed to save scan result to database, keeping in memory', error, { jobId });
+      // Keep in jobStatus for fallback
+      jobStatus.set(jobId, { 
+        status: 'failed', 
+        startedAt: jobStatus.get(jobId)?.startedAt || new Date(),
+        error: 'Database save failed, but scan completed successfully'
+      });
+    }
+    
+    // Remove from running jobs tracking
+    jobStatus.delete(jobId);
     
     logger.info('Background scan process completed', { 
       jobId, 
@@ -552,13 +751,11 @@ async function runScan(jobId: string, namespace?: string, ruleIds?: string[]) {
   } catch (error: any) {
     const duration = Date.now() - startTime;
     
-    scanJobs.set(jobId, { 
+    // Update job status to failed
+    jobStatus.set(jobId, { 
       status: 'failed', 
-      result: { 
-        error: error.message,
-        duration,
-        timestamp: new Date().toISOString()
-      } 
+      startedAt: jobStatus.get(jobId)?.startedAt || new Date(),
+      error: error.message
     });
     
     logger.error('Background scan process failed', error, { 
@@ -593,9 +790,10 @@ export const startServer = async () => {
       name: 'scan-jobs-cleanup',
       priority: 30,
       handler: async () => {
-        logger.info('Cleaning up scan jobs');
-        // Save any running jobs state if needed
-        const runningJobs = Array.from(scanJobs.entries())
+        logger.info('Cleaning up scan jobs and database connections');
+        
+        // Log any running jobs
+        const runningJobs = Array.from(jobStatus.entries())
           .filter(([_, job]) => job.status === 'running')
           .map(([id]) => id);
         
@@ -603,6 +801,13 @@ export const startServer = async () => {
           logger.warn('Found running scan jobs during shutdown', {
             jobIds: runningJobs
           });
+        }
+        
+        // Close database connection
+        try {
+          await database.close();
+        } catch (error) {
+          logger.warn('Error closing database connection', error);
         }
       },
       timeout: 5000
@@ -612,4 +817,9 @@ export const startServer = async () => {
     logger.error('Server failed to start', err as Error);
     process.exit(1);
   }
+};
+
+// Export server builder function for testing
+export const buildServer = () => {
+  return fastify;
 };
