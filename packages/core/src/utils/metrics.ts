@@ -76,7 +76,7 @@ class MetricsCollector extends EventEmitter {
     const duration = Date.now() - startTime;
     this.timers.delete(timerId);
 
-    const name = timerId.split('_')[0];
+    const name = timerId.split('_')[0] || 'unknown_timer';
     const key = this.getMetricKey(name, labels);
     
     const metric: Metric = {

@@ -2,8 +2,8 @@ import { KubeConfig } from '@kubernetes/client-node';
 import { metrics, HealthCheck, KubeKavachMetrics } from './metrics';
 import { logger } from './logger';
 import { loadConfig } from './config-loader';
-import { createConnection } from 'net';
-import { promisify } from 'util';
+// import { createConnection } from 'net';
+// import { promisify } from 'util';
 
 export interface SystemHealth {
   status: 'healthy' | 'unhealthy' | 'warning';
@@ -47,8 +47,9 @@ class HealthManager {
         }
 
         // Test connectivity by making a simple API call
-        const coreV1Api = kubeConfig.makeApiClient(require('@kubernetes/client-node').CoreV1Api);
-        await coreV1Api.listNamespace();
+        const { CoreV1Api } = require('@kubernetes/client-node');
+        const coreV1Api = kubeConfig.makeApiClient(CoreV1Api);
+        await (coreV1Api as any).listPodForAllNamespaces();
 
         return {
           name: 'kubernetes',
@@ -96,7 +97,6 @@ class HealthManager {
     // Memory usage check
     metrics.registerHealthCheck('memory', async (): Promise<HealthCheck> => {
       const usage = process.memoryUsage();
-      const totalMemory = usage.heapTotal + usage.external;
       const usagePercentage = (usage.heapUsed / usage.heapTotal) * 100;
 
       let status: 'healthy' | 'unhealthy' | 'warning' = 'healthy';
@@ -131,7 +131,7 @@ class HealthManager {
         const { promisify } = require('util');
         const stat = promisify(fs.stat);
         
-        const stats = await stat(process.cwd());
+        await stat(process.cwd());
         
         return {
           name: 'disk',

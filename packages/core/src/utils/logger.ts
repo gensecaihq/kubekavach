@@ -22,7 +22,7 @@ class ProductionLogger {
       formatters: {
         level: (label) => ({ level: label }),
       },
-      timestamp: pino.stdTimeFunctions.isoTime,
+      timestamp: () => `,"time":"${new Date().toISOString()}"`,
       redact: {
         paths: [
           'apiKey',
@@ -30,7 +30,6 @@ class ProductionLogger {
           'token',
           'authorization',
           'cookie',
-          'x-api-key',
           '*.apiKey',
           '*.password',
           '*.token'

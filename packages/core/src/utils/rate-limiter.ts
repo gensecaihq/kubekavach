@@ -29,7 +29,6 @@ class RateLimiter {
       check: (key: string): RateLimitResult => {
         const store = this.stores.get(name)!;
         const now = Date.now();
-        const windowStart = now - config.windowMs;
 
         // Clean up expired entries
         for (const [k, data] of store.entries()) {
@@ -90,7 +89,7 @@ class RateLimiter {
       const now = Date.now();
       let cleaned = 0;
 
-      for (const [limiterName, store] of this.stores.entries()) {
+      for (const [_limiterName, store] of this.stores.entries()) {
         for (const [key, data] of store.entries()) {
           if (data.resetTime <= now) {
             store.delete(key);

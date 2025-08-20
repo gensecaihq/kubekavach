@@ -5,5 +5,8 @@
 export * from './ai';
 export * from './config';
 export * from './replay';
-export * from './rule';
 export * from './scan';
+
+// Re-export rule types with explicit naming to avoid conflicts
+export { RuleSchema, type Rule } from './rule';
+export { Severity as RuleSeverity } from './rule';

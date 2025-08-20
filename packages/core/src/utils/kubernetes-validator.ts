@@ -1,5 +1,4 @@
 
-import { V1Pod } from '@kubernetes/client-node';
 import { z } from 'zod';
 
 // Placeholder for a more comprehensive Kubernetes schema validator

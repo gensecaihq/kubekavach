@@ -9,6 +9,30 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./utils/rate-limiter": {
+      "import": "./dist/utils/rate-limiter.js"
+    },
+    "./utils/security": {
+      "import": "./dist/utils/security.js"
+    },
+    "./utils/logger": {
+      "import": "./dist/utils/logger.js"
+    },
+    "./utils/metrics": {
+      "import": "./dist/utils/metrics.js"
+    },
+    "./utils/health": {
+      "import": "./dist/utils/health.js"
+    },
+    "./utils/graceful-shutdown": {
+      "import": "./dist/utils/graceful-shutdown.js"
+    },
+    "./utils/error-recovery": {
+      "import": "./dist/utils/error-recovery.js"
+    },
+    "./utils/database": {
+      "import": "./dist/utils/database.js"
     }
   },
   "files": [
@@ -34,6 +58,8 @@
     "@types/fs-extra": "^11.0.4",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.11.0",
+    "@types/pg": "^8.15.5",
+    "fastify": "^5.5.0",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3"
   }

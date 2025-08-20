@@ -16,30 +16,50 @@ const CONFIG_PATH = path.join(CONFIG_DIR, 'config.yaml');
  * @returns The loaded or default configuration.
  */
 export function loadConfig(): KubeKavachConfig {
-  let config: KubeKavachConfig = {};
+  let rawConfig: any = {};
 
   if (fs.existsSync(CONFIG_PATH)) {
     try {
       const fileContents = fs.readFileSync(CONFIG_PATH, 'utf8');
       const data = yaml.load(fileContents);
-      config = KubeKavachConfigSchema.parse(data);
+      rawConfig = { ...rawConfig, ...(data && typeof data === 'object' ? data : {}) };
     } catch (error: any) {
       console.error(`Error loading configuration from ${CONFIG_PATH}:`, error);
       // Continue with default/env config on parsing error
     }
   }
 
+  // Parse and validate with defaults
+  const config = KubeKavachConfigSchema.parse(rawConfig);
+
   // Prioritize environment variables for sensitive fields
   if (process.env.KUBEKAVACH_API_KEY) {
-    if (!config.api) config.api = {};
+    if (!config.api) {
+      config.api = {
+        port: 3000,
+        host: '0.0.0.0',
+        corsOrigin: 'http://localhost:8080',
+        rateLimit: { max: 1000, timeWindow: '1 minute' }
+      };
+    }
     config.api.apiKey = process.env.KUBEKAVACH_API_KEY;
   }
   if (process.env.KUBEKAVACH_AI_API_KEY) {
-    if (!config.ai) config.ai = {};
+    if (!config.ai) {
+      config.ai = {
+        provider: 'openai' as const,
+        model: 'gpt-3.5-turbo'
+      };
+    }
     config.ai.apiKey = process.env.KUBEKAVACH_AI_API_KEY;
   }
   if (process.env.KUBEKAVACH_AI_PROVIDER) {
-    if (!config.ai) config.ai = {};
+    if (!config.ai) {
+      config.ai = {
+        provider: 'openai' as const,
+        model: 'gpt-3.5-turbo'
+      };
+    }
     config.ai.provider = process.env.KUBEKAVACH_AI_PROVIDER as any;
   }
   if (process.env.KUBEKAVACH_KUBECONFIG_PATH) {

@@ -9,7 +9,7 @@ import { FastifyInstance } from 'fastify';
  *
  * @param app The Fastify instance (for API server) or other relevant application context.
  */
-export function initializeObservability(app?: FastifyInstance): void {
+export function initializeObservability(_app?: FastifyInstance): void {
   console.log('Initializing observability...');
 
   // --- Prometheus Metrics Integration (Placeholder) ---

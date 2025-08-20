@@ -395,10 +395,6 @@ fastify.addHook('preHandler', async (request, reply) => {
   request.user = user;
 });
 
-const ScanRequestSchema = z.object({
-  namespace: z.string().optional(),
-  ruleIds: z.array(z.string()).optional(),
-});
 
 // Health check endpoints
 fastify.get('/health', async (request, reply) => {

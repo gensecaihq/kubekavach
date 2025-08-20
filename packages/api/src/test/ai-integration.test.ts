@@ -7,82 +7,9 @@ describe('AI Integration Tests', () => {
   const testApiKey = 'ai-test-key-12345678901234567890123456789012';
 
   beforeAll(async () => {
-    // Mock configuration with AI enabled
-    vi.mock('@kubekavach/core', async () => {
-      const actual = await vi.importActual('@kubekavach/core');
-      return {
-        ...actual,
-        loadConfig: vi.fn().mockReturnValue({
-          api: {
-            port: 3005,
-            host: '127.0.0.1',
-            corsOrigin: 'http://localhost:5173'
-          },
-          users: [{
-            username: 'ai-user',
-            apiKey: testApiKey,
-            roles: ['admin', 'scanner', 'viewer']
-          }],
-          ai: {
-            enabled: true,
-            provider: 'openai',
-            apiKey: 'test-openai-key',
-            model: 'gpt-4'
-          }
-        }),
-        database: {
-          initialize: vi.fn().mockResolvedValue(undefined),
-          getScanResult: vi.fn().mockImplementation(async (scanId: string) => {
-            if (scanId === 'test-scan-123') {
-              return {
-                id: scanId,
-                timestamp: '2024-01-01T00:00:00.000Z',
-                cluster: 'test-cluster',
-                namespace: 'default',
-                duration: 1500,
-                summary: {
-                  total: 2,
-                  critical: 1,
-                  high: 1,
-                  medium: 0,
-                  low: 0
-                },
-                findings: [
-                  {
-                    ruleId: 'KKR001',
-                    ruleName: 'Privileged Container',
-                    severity: 'CRITICAL',
-                    resource: {
-                      kind: 'Pod',
-                      name: 'vulnerable-pod',
-                      namespace: 'default',
-                      apiVersion: 'v1'
-                    },
-                    message: 'Container running in privileged mode',
-                    remediation: 'Set privileged: false in securityContext'
-                  },
-                  {
-                    ruleId: 'KKR004',
-                    ruleName: 'Host Network Access',
-                    severity: 'HIGH',
-                    resource: {
-                      kind: 'Pod',
-                      name: 'network-pod',
-                      namespace: 'default',
-                      apiVersion: 'v1'
-                    },
-                    message: 'Pod using host network',
-                    remediation: 'Remove hostNetwork: true'
-                  }
-                ]
-              };
-            }
-            return null;
-          }),
-          close: vi.fn().mockResolvedValue(undefined)
-        }
-      };
-    });
+    // Set environment variables for test configuration
+    process.env.NODE_ENV = 'test';
+    process.env.KUBEKAVACH_API_KEY = testApiKey;
 
     // Mock AI providers
     vi.mock('@kubekavach/ai', () => ({
@@ -293,7 +220,7 @@ This assessment was generated based on ${findings.length} security findings acro
       vi.mocked(vi.importActual('@kubekavach/core')).then(actual => {
         (actual as any).loadConfig = vi.fn().mockReturnValue({
           api: { port: 3005, host: '127.0.0.1' },
-          users: [{ username: 'test', apiKey: testApiKey, roles: ['admin'] }],
+          users: [{ username: 'test', apiKey: 'ai-test-key-12345678901234567890123456789012', roles: ['admin'] }],
           ai: { enabled: false }
         });
       });
@@ -404,7 +331,7 @@ This assessment was generated based on ${findings.length} security findings acro
         vi.mocked(vi.importActual('@kubekavach/core')).then(actual => {
           (actual as any).loadConfig = vi.fn().mockReturnValue({
             api: { port: 3005, host: '127.0.0.1' },
-            users: [{ username: 'test', apiKey: testApiKey, roles: ['admin'] }],
+            users: [{ username: 'test', apiKey: 'ai-test-key-12345678901234567890123456789012', roles: ['admin'] }],
             ai: {
               enabled: true,
               provider,

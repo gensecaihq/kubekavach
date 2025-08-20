@@ -1,4 +1,4 @@
-import { Pool, PoolClient, QueryResult } from 'pg';
+import { Pool } from 'pg';
 import { logger } from './logger';
 import { metrics } from './metrics';
 import { ScanResult, Finding } from '../types';
@@ -47,10 +47,8 @@ export interface FindingRow {
 
 class DatabaseManager {
   private pool: Pool | null = null;
-  private config: DatabaseConfig | null = null;
 
   async initialize(config: DatabaseConfig): Promise<void> {
-    this.config = config;
     
     this.pool = new Pool({
       host: config.host,
@@ -426,7 +424,7 @@ class DatabaseManager {
         ORDER BY date DESC
       `);
 
-      return result.rows.map(row => ({
+      return result.rows.map((row: any) => ({
         date: row.date,
         total: Math.round(row.avg_total),
         critical: Math.round(row.avg_critical),

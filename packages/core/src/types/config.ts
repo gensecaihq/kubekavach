@@ -49,9 +49,18 @@ export const KubeKavachConfigSchema = z.object({
   ai: AIConfigSchema.optional(),
   replay: ReplayConfigSchema.optional(),
   api: APIConfigSchema.optional(),
-  users: z.array(UserSchema).default([]), // New: Define API users with roles
+  users: z.array(UserSchema).optional(), // Optional API users with roles
   // Path to the kubeconfig file (if not using default)
   kubeconfig: z.string().optional(),
+  database: z.object({
+    type: z.enum(['postgres', 'sqlite']).optional(),
+    url: z.string().optional(),
+    host: z.string().optional(),
+    port: z.number().optional(),
+    database: z.string().optional(),
+    username: z.string().optional(),
+    password: z.string().optional()
+  }).optional()
 });
 
 export type KubeKavachConfig = z.infer<typeof KubeKavachConfigSchema>;

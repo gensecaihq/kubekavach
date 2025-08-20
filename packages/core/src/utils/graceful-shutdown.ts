@@ -243,7 +243,7 @@ export const gracefulShutdown = new GracefulShutdownManager();
 
 // Express/Fastify middleware factory
 export function createShutdownMiddleware() {
-  return (req: any, res: any, next: any) => {
+  return (_req: any, res: any, next: any) => {
     if (gracefulShutdown.isHealthy()) {
       next();
     } else {
