@@ -1,4 +1,4 @@
-import { KubeConfig } from '@kubernetes/client-node';
+import { KubeConfig, CoreV1Api } from '@kubernetes/client-node';
 import { metrics, HealthCheck, KubeKavachMetrics } from './metrics';
 import { logger } from './logger';
 import { loadConfig } from './config-loader';
@@ -24,32 +24,44 @@ class HealthManager {
   }
 
   private setupHealthChecks(): void {
-    // Kubernetes connectivity check
+    // Kubernetes connectivity check (gracefully handles missing cluster)
     metrics.registerHealthCheck('kubernetes', async (): Promise<HealthCheck> => {
       try {
         const config = loadConfig();
-        const kubeConfig = new KubeConfig();
         
-        if (config.kubeconfig) {
-          kubeConfig.loadFromFile(config.kubeconfig);
-        } else {
-          kubeConfig.loadFromDefault();
+        // Skip Kubernetes check if no kubeconfig is available (development mode)
+        if (!config.kubeconfig) {
+          return {
+            name: 'kubernetes',
+            status: 'warning',
+            message: 'No Kubernetes cluster configured (development mode)',
+            timestamp: Date.now()
+          };
         }
+
+        const kubeConfig = new KubeConfig();
+        kubeConfig.loadFromFile(config.kubeconfig);
 
         const cluster = kubeConfig.getCurrentCluster();
         if (!cluster) {
           return {
             name: 'kubernetes',
             status: 'unhealthy',
-            message: 'No Kubernetes cluster configured',
+            message: 'No Kubernetes cluster configured in kubeconfig',
             timestamp: Date.now()
           };
         }
 
-        // Test connectivity by making a simple API call
-        const { CoreV1Api } = require('@kubernetes/client-node');
+        // Test connectivity by making a simple API call with timeout
         const coreV1Api = kubeConfig.makeApiClient(CoreV1Api);
-        await (coreV1Api as any).listPodForAllNamespaces();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Kubernetes API timeout')), 5000)
+        );
+        
+        await Promise.race([
+          coreV1Api.listPodForAllNamespaces(),
+          timeoutPromise
+        ]);
 
         return {
           name: 'kubernetes',
@@ -72,8 +84,9 @@ class HealthManager {
     // Docker connectivity check (for replay functionality)
     metrics.registerHealthCheck('docker', async (): Promise<HealthCheck> => {
       try {
-        const Docker = require('dockerode');
-        const docker = new Docker();
+        // Use dynamic import to avoid bundling dockerode in core
+        const { default: Dockerode } = await import('dockerode');
+        const docker = new Dockerode();
         
         await docker.ping();
         

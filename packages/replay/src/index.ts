@@ -14,7 +14,7 @@ export class ReplayError extends Error {
   }
 }
 
-export class ReplayEngine {
+export class PodReplayer {
   private readonly docker: Dockerode;
   private readonly config;
   private readonly scanner: ImageScanner;
@@ -29,6 +29,10 @@ export class ReplayEngine {
     } catch (error: any) {
       throw new ReplayError('Failed to connect to Docker daemon. Is it running?', error);
     }
+  }
+
+  async replayPod(pod: V1Pod): Promise<void> {
+    return this.replay(pod);
   }
 
   async replay(pod: V1Pod): Promise<void> {
@@ -159,6 +163,39 @@ export class ReplayEngine {
         // Should not happen due to Zod validation, but as a fallback
         console.warn(`Unknown secret handling strategy: ${this.config.secretHandling}. Using placeholder.`);
         return `KUBEKAVACH_PLACEHOLDER_${secretKeyRef.name}_${secretKeyRef.key}`;
+    }
+  }
+
+  async cleanup(): Promise<void> {
+    try {
+      // List all containers with kubekavach labels
+      const containers = await this.docker.listContainers({
+        all: true,
+        filters: {
+          label: ['kubekavach.replay=true']
+        }
+      });
+
+      // Stop and remove all replay containers
+      for (const containerInfo of containers) {
+        const container = this.docker.getContainer(containerInfo.Id);
+        
+        try {
+          if (containerInfo.State === 'running') {
+            await container.stop();
+          }
+          await container.remove();
+          console.log(`Cleaned up container: ${containerInfo.Id.substring(0, 12)}`);
+        } catch (error) {
+          console.warn(`Failed to cleanup container ${containerInfo.Id.substring(0, 12)}:`, error);
+        }
+      }
+
+      // Cleanup isolated networks
+      await this.isolation.cleanupNetworks();
+      
+    } catch (error: any) {
+      throw new ReplayError('Failed to cleanup replay resources', error);
     }
   }
 

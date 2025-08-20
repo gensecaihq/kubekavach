@@ -443,12 +443,11 @@ fastify.post('/scan', {
 
 // Endpoint to get scan results
 fastify.get('/scan/results/:jobId', {
-  // TODO: Fix schema validation
-  // schema: {
-  //   response: {
-  //     200: z.object({ status: z.string(), result: ScanResultSchema.optional() }),
-  //   },
-  // },
+  schema: {
+    response: {
+      200: z.object({ status: z.string(), result: ScanResultSchema.optional() }),
+    },
+  },
   tags: ['scan'],
   summary: 'Get security scan results',
   description: 'Retrieves the status and results of a previously initiated security scan.',
@@ -507,20 +506,19 @@ fastify.get('/scan/results/:jobId', {
 
 // Scan history endpoint
 fastify.get('/scan/history', {
-  // TODO: Fix schema validation
-  // schema: {
-  //   querystring: z.object({
-  //     cluster: z.string().optional(),
-  //     namespace: z.string().optional(),
-  //     limit: z.coerce.number().min(1).max(100).default(20),
-  //     offset: z.coerce.number().min(0).default(0),
-  //     startDate: z.string().datetime().optional(),
-  //     endDate: z.string().datetime().optional()
-  //   }),
-  //   response: {
-  //     200: z.array(ScanResultSchema)
-  //   }
-  // },
+  schema: {
+    querystring: z.object({
+      cluster: z.string().optional(),
+      namespace: z.string().optional(),
+      limit: z.coerce.number().min(1).max(100).default(20),
+      offset: z.coerce.number().min(0).default(0),
+      startDate: z.string().datetime().optional(),
+      endDate: z.string().datetime().optional()
+    }),
+    response: {
+      200: z.array(ScanResultSchema)
+    }
+  },
   tags: ['scan'],
   summary: 'Get scan history',
   description: 'Retrieves historical scan results with filtering options',
@@ -552,22 +550,21 @@ fastify.get('/scan/history', {
 
 // Security trends endpoint
 fastify.get('/scan/trends', {
-  // TODO: Fix schema validation
-  // schema: {
-  //   querystring: z.object({
-  //     days: z.coerce.number().min(1).max(365).default(30)
-  //   }),
-  //   response: {
-  //     200: z.array(z.object({
-  //       date: z.string(),
-  //       total: z.number(),
-  //       critical: z.number(),
-  //       high: z.number(),
-  //       medium: z.number(),
-  //       low: z.number()
-  //     }))
-  //   }
-  // },
+  schema: {
+    querystring: z.object({
+      days: z.coerce.number().min(1).max(365).default(30)
+    }),
+    response: {
+      200: z.array(z.object({
+        date: z.string(),
+        total: z.number(),
+        critical: z.number(),
+        high: z.number(),
+        medium: z.number(),
+        low: z.number()
+      }))
+    }
+  },
   tags: ['analytics'],
   summary: 'Get security trends',
   description: 'Retrieves security trends over specified time period',
@@ -589,35 +586,34 @@ fastify.get('/scan/trends', {
 
 // AI remediation for individual finding
 fastify.post('/ai/remediation', {
-  // TODO: Fix schema validation
-  // schema: {
-  //   body: z.object({
-  //     finding: z.object({
-  //       ruleId: z.string(),
-  //       ruleName: z.string(),
-  //       severity: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
-  //       resource: z.object({
-  //         kind: z.string(),
-  //         name: z.string(),
-  //         namespace: z.string().optional(),
-  //         apiVersion: z.string()
-  //       }),
-  //       message: z.string(),
-  //       remediation: z.string().optional()
-  //     })
-  //   }),
-  //   response: {
-  //     200: z.object({
-  //       remediation: z.string(),
-  //       provider: z.string(),
-  //       generatedAt: z.string()
-  //     }),
-  //     503: z.object({
-  //       error: z.string(),
-  //       message: z.string()
-  //     })
-  //   }
-  // },
+  schema: {
+    body: z.object({
+      finding: z.object({
+        ruleId: z.string(),
+        ruleName: z.string(),
+        severity: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
+        resource: z.object({
+          kind: z.string(),
+          name: z.string(),
+          namespace: z.string().optional(),
+          apiVersion: z.string()
+        }),
+        message: z.string(),
+        remediation: z.string().optional()
+      })
+    }),
+    response: {
+      200: z.object({
+        remediation: z.string(),
+        provider: z.string(),
+        generatedAt: z.string()
+      }),
+      503: z.object({
+        error: z.string(),
+        message: z.string()
+      })
+    }
+  },
   tags: ['ai'],
   summary: 'Generate AI remediation for finding',
   description: 'Uses configured AI provider to generate detailed remediation steps',
@@ -672,28 +668,27 @@ fastify.post('/ai/remediation', {
 
 // AI analysis for scan results
 fastify.post('/ai/analysis/:scanId', {
-  // TODO: Fix schema validation
-  // schema: {
-  //   params: z.object({
-  //     scanId: z.string()
-  //   }),
-  //   response: {
-  //     200: z.object({
-  //       analysis: z.string(),
-  //       provider: z.string(),
-  //       generatedAt: z.string(),
-  //       scanId: z.string()
-  //     }),
-  //     404: z.object({
-  //       error: z.string(),
-  //       message: z.string()
-  //     }),
-  //     503: z.object({
-  //       error: z.string(),
-  //       message: z.string()
-  //     })
-  //   }
-  // },
+  schema: {
+    params: z.object({
+      scanId: z.string()
+    }),
+    response: {
+      200: z.object({
+        analysis: z.string(),
+        provider: z.string(),
+        generatedAt: z.string(),
+        scanId: z.string()
+      }),
+      404: z.object({
+        error: z.string(),
+        message: z.string()
+      }),
+      503: z.object({
+        error: z.string(),
+        message: z.string()
+      })
+    }
+  },
   tags: ['ai'],
   summary: 'Generate AI analysis for scan results',
   description: 'Analyzes entire scan results and provides comprehensive security assessment',

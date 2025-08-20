@@ -8,5 +8,4 @@ export * from './replay';
 export * from './scan';
 
 // Re-export rule types with explicit naming to avoid conflicts
-export { RuleSchema, type Rule } from './rule';
-export { Severity as RuleSeverity } from './rule';
+export { RuleSchema, type Rule, Severity } from './rule';

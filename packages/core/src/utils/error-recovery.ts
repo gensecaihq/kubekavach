@@ -131,7 +131,7 @@ export class CircuitBreaker {
         const error = new Error(`Circuit breaker is OPEN for ${this.name}`);
         
         logger.warn('Circuit breaker blocked request', {
-          circuitBreaker: this.name,
+          circuitBreakerName: this.name,
           state: this.state,
           nextAttemptTime: this.nextAttemptTime
         });
@@ -146,7 +146,7 @@ export class CircuitBreaker {
         this.successCount = 0;
         
         logger.info('Circuit breaker transitioning to HALF_OPEN', {
-          circuitBreaker: this.name
+          circuitBreakerName: this.name
         });
       }
     }
@@ -173,7 +173,7 @@ export class CircuitBreaker {
         this.state = CircuitBreakerState.CLOSED;
         
         logger.info('Circuit breaker closed after recovery', {
-          circuitBreaker: this.name,
+          circuitBreakerName: this.name,
           successCount: this.successCount
         });
         
@@ -198,7 +198,7 @@ export class CircuitBreaker {
       this.nextAttemptTime = Date.now() + this.config.recoveryTimeout;
       
       logger.warn('Circuit breaker opened from HALF_OPEN state', {
-        circuitBreaker: this.name,
+        circuitBreakerName: this.name,
         failureCount: this.failureCount
       });
       
@@ -207,10 +207,10 @@ export class CircuitBreaker {
       this.nextAttemptTime = Date.now() + this.config.recoveryTimeout;
       
       logger.error('Circuit breaker opened due to failure threshold', {
-        circuitBreaker: this.name,
+        circuitBreakerName: this.name,
         failureCount: this.failureCount,
         threshold: this.config.failureThreshold
-      });
+      } as any);
       
       metrics.incrementCounter('circuit_breaker_opened_total', 1, {
         name: this.name
@@ -275,7 +275,7 @@ export class CircuitBreaker {
     this.nextAttemptTime = 0;
     
     logger.info('Circuit breaker manually reset', {
-      circuitBreaker: this.name
+      circuitBreakerName: this.name
     });
   }
   
@@ -284,7 +284,7 @@ export class CircuitBreaker {
     this.nextAttemptTime = Date.now() + this.config.recoveryTimeout;
     
     logger.warn('Circuit breaker manually opened', {
-      circuitBreaker: this.name
+      circuitBreakerName: this.name
     });
   }
 }

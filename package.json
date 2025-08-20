@@ -3,7 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "description": "Developer-first Kubernetes security scanner with local pod replay",
-  "keywords": ["kubernetes", "security", "debugging", "replay", "k8s"],
+  "keywords": [
+    "kubernetes",
+    "security",
+    "debugging",
+    "replay",
+    "k8s"
+  ],
   "homepage": "https://kubekavach.gensecai.org",
   "bugs": {
     "url": "https://github.com/gensecaihq/kubekavach/issues"
@@ -40,5 +46,8 @@
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
   },
-  "packageManager": "pnpm@8.14.1"
+  "packageManager": "pnpm@8.14.1",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
 }

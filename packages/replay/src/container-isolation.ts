@@ -204,4 +204,27 @@ export class ContainerIsolation {
     
     return { supported, warnings };
   }
+
+  async cleanupNetworks(): Promise<void> {
+    try {
+      // List all kubekavach isolated networks
+      const networks = await this.docker.listNetworks({
+        filters: {
+          label: ['kubekavach.isolated=true']
+        }
+      });
+      
+      for (const networkInfo of networks) {
+        try {
+          const network = this.docker.getNetwork(networkInfo.Id);
+          await network.remove();
+          logger.info(`Cleaned up isolated network: ${networkInfo.Name}`);
+        } catch (error) {
+          logger.warn(`Failed to cleanup network ${networkInfo.Name}:`, error);
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to cleanup isolated networks', error);
+    }
+  }
 }

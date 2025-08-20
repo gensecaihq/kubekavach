@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsup",
-    "start": "node dist/server.js",
+    "start": "node dist/start.js",
     "clean": "rm -rf dist .turbo",
     "typecheck": "tsc --noEmit",
     "test": "vitest"
