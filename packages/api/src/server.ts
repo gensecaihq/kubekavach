@@ -10,6 +10,7 @@ import { withRetryAndCircuitBreaker } from '@kubekavach/core/utils/error-recover
 import { database } from '@kubekavach/core/utils/database';
 import fastifyRateLimit from '@fastify/rate-limit';
 import { allRules } from '@kubekavach/rules';
+import { OpenAIProvider, AnthropicProvider, GoogleAIProvider, OllamaProvider } from '@kubekavach/ai';
 import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
 import fastifySwagger from '@fastify/swagger';
@@ -103,6 +104,32 @@ fastify.register(fastifySwaggerUi, {
 
 // Job status tracking (lightweight in-memory for running jobs)
 const jobStatus = new Map<string, { status: 'running' | 'queued' | 'failed'; startedAt: Date; error?: string }>();
+
+// Initialize AI provider based on configuration
+function getAIProvider() {
+  if (!config.ai?.enabled || !config.ai?.apiKey) {
+    return null;
+  }
+
+  const aiConfig = {
+    apiKey: config.ai.apiKey,
+    model: config.ai.model || 'default'
+  };
+
+  switch (config.ai.provider?.toLowerCase()) {
+    case 'openai':
+      return new OpenAIProvider(aiConfig);
+    case 'anthropic':
+      return new AnthropicProvider(aiConfig);
+    case 'google':
+      return new GoogleAIProvider(aiConfig);
+    case 'ollama':
+      return new OllamaProvider(aiConfig);
+    default:
+      logger.warn('Unknown AI provider specified', { provider: config.ai.provider });
+      return null;
+  }
+}
 
 // Initialize rate limiters
 const apiLimiter = rateLimiter.createLimiter('api', RateLimitConfigs.api);
@@ -261,6 +288,33 @@ fastify.get('/rules', {
   preHandler: [authorize(['viewer', 'scanner', 'admin'])]
 }, async (request, reply) => {
   reply.send(allRules);
+});
+
+// AI configuration status endpoint
+fastify.get('/ai/status', {
+  schema: {
+    response: {
+      200: z.object({
+        enabled: z.boolean(),
+        provider: z.string().optional(),
+        model: z.string().optional(),
+        configured: z.boolean()
+      })
+    }
+  },
+  tags: ['ai'],
+  summary: 'Get AI provider status',
+  description: 'Returns the current AI configuration status',
+  preHandler: [authorize(['admin'])]
+}, async (request, reply) => {
+  const aiProvider = getAIProvider();
+  
+  reply.send({
+    enabled: config.ai?.enabled || false,
+    provider: config.ai?.provider,
+    model: config.ai?.model,
+    configured: aiProvider !== null
+  });
 });
 
 // API Key authentication hook with security hardening
@@ -551,6 +605,176 @@ fastify.get('/scan/trends', {
     reply.code(500).send({ 
       error: 'Internal Server Error', 
       message: 'Failed to retrieve security trends' 
+    });
+  }
+});
+
+// AI remediation for individual finding
+fastify.post('/ai/remediation', {
+  schema: {
+    body: z.object({
+      finding: z.object({
+        ruleId: z.string(),
+        ruleName: z.string(),
+        severity: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
+        resource: z.object({
+          kind: z.string(),
+          name: z.string(),
+          namespace: z.string().optional(),
+          apiVersion: z.string()
+        }),
+        message: z.string(),
+        remediation: z.string().optional()
+      })
+    }),
+    response: {
+      200: z.object({
+        remediation: z.string(),
+        provider: z.string(),
+        generatedAt: z.string()
+      }),
+      503: z.object({
+        error: z.string(),
+        message: z.string()
+      })
+    }
+  },
+  tags: ['ai'],
+  summary: 'Generate AI remediation for finding',
+  description: 'Uses configured AI provider to generate detailed remediation steps',
+  preHandler: [authorize(['viewer', 'scanner', 'admin'])]
+}, async (request, reply) => {
+  try {
+    const aiProvider = getAIProvider();
+    
+    if (!aiProvider) {
+      reply.code(503).send({
+        error: 'Service Unavailable',
+        message: 'AI provider not configured or disabled'
+      });
+      return;
+    }
+
+    const { finding } = request.body as any;
+    
+    logger.info('Generating AI remediation', { 
+      ruleId: finding.ruleId, 
+      severity: finding.severity,
+      user: request.user?.username
+    });
+
+    const startTime = Date.now();
+    const remediation = await aiProvider.generateRemediation(finding);
+    const duration = Date.now() - startTime;
+
+    metrics.recordHistogram('ai_remediation_duration_ms', duration, { 
+      provider: config.ai?.provider || 'unknown' 
+    });
+
+    reply.send({
+      remediation,
+      provider: config.ai?.provider || 'unknown',
+      generatedAt: new Date().toISOString()
+    });
+    
+  } catch (error: any) {
+    logger.error('AI remediation generation failed', error);
+    
+    metrics.incrementCounter('ai_remediation_errors_total', 1, { 
+      provider: config.ai?.provider || 'unknown' 
+    });
+
+    reply.code(500).send({
+      error: 'Internal Server Error',
+      message: 'Failed to generate remediation'
+    });
+  }
+});
+
+// AI analysis for scan results
+fastify.post('/ai/analysis/:scanId', {
+  schema: {
+    params: z.object({
+      scanId: z.string()
+    }),
+    response: {
+      200: z.object({
+        analysis: z.string(),
+        provider: z.string(),
+        generatedAt: z.string(),
+        scanId: z.string()
+      }),
+      404: z.object({
+        error: z.string(),
+        message: z.string()
+      }),
+      503: z.object({
+        error: z.string(),
+        message: z.string()
+      })
+    }
+  },
+  tags: ['ai'],
+  summary: 'Generate AI analysis for scan results',
+  description: 'Analyzes entire scan results and provides comprehensive security assessment',
+  preHandler: [authorize(['viewer', 'scanner', 'admin'])]
+}, async (request, reply) => {
+  try {
+    const aiProvider = getAIProvider();
+    
+    if (!aiProvider) {
+      reply.code(503).send({
+        error: 'Service Unavailable',
+        message: 'AI provider not configured or disabled'
+      });
+      return;
+    }
+
+    const { scanId } = request.params as any;
+    
+    // Get scan results from database
+    const scanResult = await database.getScanResult(scanId);
+    
+    if (!scanResult) {
+      reply.code(404).send({
+        error: 'Not Found',
+        message: 'Scan result not found'
+      });
+      return;
+    }
+
+    logger.info('Generating AI scan analysis', { 
+      scanId, 
+      findingsCount: scanResult.findings.length,
+      user: request.user?.username
+    });
+
+    const startTime = Date.now();
+    const analysis = await aiProvider.analyzeFindings(scanResult.findings);
+    const duration = Date.now() - startTime;
+
+    metrics.recordHistogram('ai_analysis_duration_ms', duration, { 
+      provider: config.ai?.provider || 'unknown',
+      findings_count: scanResult.findings.length.toString()
+    });
+
+    reply.send({
+      analysis,
+      provider: config.ai?.provider || 'unknown',
+      generatedAt: new Date().toISOString(),
+      scanId
+    });
+    
+  } catch (error: any) {
+    logger.error('AI scan analysis failed', error);
+    
+    metrics.incrementCounter('ai_analysis_errors_total', 1, { 
+      provider: config.ai?.provider || 'unknown' 
+    });
+
+    reply.code(500).send({
+      error: 'Internal Server Error',
+      message: 'Failed to generate analysis'
     });
   }
 });

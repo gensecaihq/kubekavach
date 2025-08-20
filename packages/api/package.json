@@ -18,6 +18,7 @@
     "@fastify/helmet": "^11.1.1",
     "@fastify/swagger": "^8.13.0",
     "@fastify/swagger-ui": "^2.1.0",
+    "@kubekavach/ai": "workspace:*",
     "@kubekavach/core": "workspace:*",
     "@kubekavach/rules": "workspace:*",
     "@kubernetes/client-node": "^0.20.0",
