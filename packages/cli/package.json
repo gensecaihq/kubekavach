@@ -26,7 +26,7 @@
     "@kubekavach/rules": "workspace:*",
     "@kubekavach/replay": "workspace:*",
     "@kubekavach/ai": "workspace:*",
-    "@kubernetes/client-node": "^0.20.0",
+    "@kubernetes/client-node": "^1.0.0",
     "@oclif/core": "^3.18.1",
     "@oclif/plugin-help": "^6.0.9",
     "@oclif/plugin-plugins": "^4.1.12",
