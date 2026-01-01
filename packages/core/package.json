@@ -45,7 +45,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@kubernetes/client-node": "^0.20.0",
+    "@kubernetes/client-node": "^1.0.0",
     "fs-extra": "^11.2.0",
     "js-yaml": "^4.1.0",
     "pg": "^8.16.3",
